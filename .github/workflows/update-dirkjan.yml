@@ -1,0 +1,48 @@
+name: Generate Dirkjan RSS Feed
+
+on:
+  # Draait automatisch elke maandag
+  schedule:
+    - cron: '0 8 * * 1'
+  # Maakt een knop aan om het handmatig te starten
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    # Geef de workflow schrijfrechten om de gh-pages branch te kunnen bijwerken
+    permissions:
+      contents: write
+
+    steps:
+      # Stap 1: Download de code uit de repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Stap 2: Zet de Python-omgeving op
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      # Stap 3: Installeer de benodigde Python-pakketten
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4 feedgen
+
+      # Stap 4: Voer het Python-script uit om dirkjan.xml te maken
+      - name: Run feed generator script
+        run: python generate_feed.py
+
+      # Stap 5: Publiceer het resultaat naar GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Vertel expliciet om alleen dit ene bestand te publiceren
+          publish_files: dirkjan.xml
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Update RSS feed'
