@@ -8,6 +8,9 @@ on:
 
 jobs:
   build:
+   runs-on: ubuntu-latest
+    permissions:      # <--- DEZE REGEL IS NIEUW
+      contents: write   # <--- EN DEZE REGEL IS NIEUW
     runs-on: ubuntu-latest
 
     steps:
