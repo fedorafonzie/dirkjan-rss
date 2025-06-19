@@ -5,14 +5,12 @@ on:
     - cron: '0 8 * * 1'
   workflow_dispatch:
 
-# Permissies voor de workflow om de Pages site te mogen bijwerken
 permissions:
   pages: write
   id-token: write
 
 jobs:
-  # Job 1: Genereert het .xml bestand
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout your repository
@@ -31,29 +29,15 @@ jobs:
       - name: Run Python script to generate feed
         run: python generate_feed.py
 
+      # --- DE CRUCIALE DEBUG-STAP ---
+      - name: Verify that dirkjan.xml was created
+        run: ls -l
+      # -----------------------------
+
       - name: Upload artifact for GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload de hele map, waar dirkjan.xml nu in staat
           path: '.'
 
-  # Job 2: Publiceert het bestand naar GitHub Pages
-  deploy:
-    # Deze job is afhankelijk van de 'build' job en start pas als die succesvol is
-    needs: build
-    
-    # Geef deze specifieke job de juiste permissies
-    permissions:
-      pages: write
-      id-token: write
-    
-    # Draai deze job in de speciale 'pages' omgeving
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    
-    runs-on: ubuntu-latest
-    steps:
       - name: Deploy to GitHub Pages
-        id: deployment
         uses: actions/deploy-pages@v4
