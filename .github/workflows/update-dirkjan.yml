@@ -1,20 +1,59 @@
-name: GitHub Pages Deployment Test
+name: Generate and Deploy Dirkjan Feed
 
 on:
-  workflow_dispatch: # Alleen handmatig te starten
+  schedule:
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+# Permissies voor de workflow om de Pages site te mogen bijwerken
+permissions:
+  pages: write
+  id-token: write
 
 jobs:
-  deploy-test:
+  # Job 1: Genereert het .xml bestand
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - name: Checkout repository
+      - name: Checkout your repository
         uses: actions/checkout@v4
-
-      - name: Deploy index.html to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          # Publiceer alleen ons testbestand
-          publish_files: index.html
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4 feedgen
+
+      - name: Run Python script to generate feed
+        run: python generate_feed.py
+
+      - name: Upload artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload de hele map, waar dirkjan.xml nu in staat
+          path: '.'
+
+  # Job 2: Publiceert het bestand naar GitHub Pages
+  deploy:
+    # Deze job is afhankelijk van de 'build' job en start pas als die succesvol is
+    needs: build
+    
+    # Geef deze specifieke job de juiste permissies
+    permissions:
+      pages: write
+      id-token: write
+    
+    # Draai deze job in de speciale 'pages' omgeving
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
