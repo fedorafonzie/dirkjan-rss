@@ -1,17 +1,8 @@
-name: Generate Dirkjan RSS Feed
-
-on:
-  schedule:
-    # Draait elke maandag om 08:00 UTC (10:00 Nederlandse zomertijd / 09:00 wintertijd)
-    - cron: '0 8 * * 1'
-  workflow_dispatch: # Dit voegt een knop toe om het handmatig te kunnen starten
-
 jobs:
   build:
-   runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
     permissions:      # <--- DEZE REGEL IS NIEUW
       contents: write   # <--- EN DEZE REGEL IS NIEUW
-    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
@@ -28,14 +19,13 @@ jobs:
         pip install requests beautifulsoup4 feedgen
 
     - name: Run feed generator script
-      run: python generate_feed.py # De naam van uw Python-script
+      run: python generate_feed.py
 
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: .
-        # Deze regels zorgen ervoor dat de commit door een bot wordt gedaan
         user_name: 'github-actions[bot]'
         user_email: 'github-actions[bot]@users.noreply.github.com'
         commit_message: 'Update RSS feed'
