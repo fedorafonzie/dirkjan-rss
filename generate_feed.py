@@ -2,7 +2,6 @@ import requests
 from bs4 import BeautifulSoup
 from feedgen.feed import FeedGenerator
 from datetime import datetime
-import pytz
 
 print("Script gestart: Test met alleen de strip van dinsdag 17 juni.")
 
