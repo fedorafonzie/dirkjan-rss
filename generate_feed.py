@@ -1,33 +1,50 @@
 import requests
 from bs4 import BeautifulSoup
 from feedgen.feed import FeedGenerator
-from datetime import datetime
+# De 'pytz' import is verwijderd en vervangen door standaard-bibliotheek modules
+from datetime import datetime, timezone, timedelta 
 
-print("Script gestart: Test met alleen de strip van dinsdag 17 juni.")
+print("Script gestart: Test met alleen de strip van dinsdag 17 juni (zonder pytz).")
 
-# Hardcoded lijst met alleen de URL voor dinsdag
+# Constante voor de feed-metadata
+DIRKJAN_URL = 'https://dirkjan.nl/'
+
+# Hardcoded data voor de test
 test_url_info = {
     'url': 'https://dirkjan.nl/cartoon/20250617_686279286/',
     'day': 'Dinsdag'
 }
 
-# Stap 1: Initialiseer de RSS-feed met een unieke test-ID
+# Stap 1: Initialiseer de RSS-feed met een nieuwe, unieke test-ID
 fg = FeedGenerator()
-# Gebruik een unieke ID voor deze test om caching te omzeilen
-fg.id('https://dirkjan.nl/feed/test-17-juni-2025') 
-fg.title('Dirkjan Strips (Alleen Dinsdag Test)')
+fg.id('https://dirkjan.nl/feed/test-17-juni-no-pytz-v2') 
+fg.title('Dirkjan Strips (Alleen Dinsdag Test, no-pytz)')
 fg.link(href=DIRKJAN_URL, rel='alternate')
 fg.description('Test-feed met alleen de strip van dinsdag 17 juni.')
 fg.language('nl')
 
-
-# Stap 2: Verwerk de ene, specifieke pagina
+# Stap 2: Verwerk de specifieke pagina
 page_url = test_url_info['url']
 day_name = test_url_info['day']
 
 print(f"--- Verwerken: {day_name} ({page_url}) ---")
 
 try:
+    # --- AANGEPASTE LOGICA: Datum zonder Pytz ---
+    # Haal de datumstring (bv. '20250617') uit de URL
+    date_str = page_url.strip('/').split('/')[-1].split('_')[0]
+    
+    # Maak een "naive" datetime object aan (zonder tijdzone)
+    naive_datetime = datetime.strptime(date_str, '%Y%m%d').replace(hour=8)
+    
+    # Maak een tijdzone-object voor de Nederlandse tijdzone in de zomer (CEST, UTC+2)
+    cest_tz = timezone(timedelta(hours=2))
+    
+    # Voeg de tijdzone-informatie toe aan het datetime object
+    publish_date = naive_datetime.replace(tzinfo=cest_tz)
+    print(f"  INFO: Publicatiedatum verwerkt: {publish_date}")
+    # ----------------------------------------------
+
     # Haal de HTML van de dag-pagina op
     page_response = requests.get(page_url)
     page_response.raise_for_status()
@@ -38,12 +55,7 @@ try:
     img_tag = cartoon_article.find('img')
     image_url = img_tag.get('src')
     
-    # Extraheer de datum uit de URL
-    date_str = page_url.strip('/').split('/')[-1].split('_')[0]
-    amsterdam_tz = pytz.timezone("Europe/Amsterdam")
-    publish_date = amsterdam_tz.localize(datetime.strptime(date_str, '%Y%m%d').replace(hour=8))
-    
-    print(f"  SUCCES: Afbeelding en datum gevonden.")
+    print(f"  SUCCES: Afbeelding gevonden.")
 
     # Voeg het ene item toe aan de feed
     fe = fg.add_entry()
