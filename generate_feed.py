@@ -1,69 +1,102 @@
 import requests
 from bs4 import BeautifulSoup
 from feedgen.feed import FeedGenerator
+import re
 
-print("Script gestart: Ophalen van webpagina.")
+print("Script gestart: Ophalen van dagelijkse strips.")
 
-# URL van de te parsen pagina
+# URL van de hoofdpagina
 DIRKJAN_URL = 'https://dirkjan.nl/'
 
-# Stap 1: Haal de webpagina op
+# Stap 1: Haal de hoofdpagina op
 try:
     response = requests.get(DIRKJAN_URL)
     response.raise_for_status()
-    print("SUCCES: Website HTML opgehaald.")
+    print("SUCCES: Hoofdpagina HTML opgehaald.")
 except requests.exceptions.RequestException as e:
-    print(f"FOUT: Kon website niet ophalen. Fout: {e}")
+    print(f"FOUT: Kon hoofdpagina niet ophalen. Fout: {e}")
     exit(1)
 
-# Stap 2: Parse de HTML en vind de afbeelding
+# Stap 2: Parse de HTML en vind de navigatielinks voor de dagen
 soup = BeautifulSoup(response.content, 'html.parser')
-print("Zoeken naar de comic-afbeelding...")
+print("Zoeken naar de navigatiebalk met dagen...")
 
-# Zoek naar de <article> tag met class="cartoon"
-cartoon_article = soup.find('article', class_='cartoon')
+# Zoek naar de <div class="post-navigation">
+navigation_div = soup.find('div', class_='post-navigation')
 
-if not cartoon_article:
-    print("FOUT: De <article class='cartoon'> tag is niet gevonden.")
+if not navigation_div:
+    print("FOUT: De <div class='post-navigation'> is niet gevonden.")
     exit(1)
 
-# Zoek binnen die article-tag naar de <img> tag
-img_tag = cartoon_article.find('img')
+# Vind alle 'a' tags (links) binnen deze navigatie-div
+day_links = navigation_div.find_all('a')
 
-if not img_tag:
-    print("FOUT: De <img> tag is niet gevonden binnen de article-tag.")
+if not day_links:
+    print("FOUT: Geen dag-links gevonden in de navigatiebalk.")
     exit(1)
 
-# Haal de URL uit het 'src' attribuut van de image-tag
-image_url = img_tag.get('src')
-if not image_url:
-    print("FOUT: De <img> tag heeft geen 'src' attribuut.")
-    exit(1)
+print(f"SUCCES: {len(day_links)} dag-links gevonden.")
 
-print(f"SUCCES: Afbeelding URL gevonden: {image_url}")
-
-# Stap 3: Bouw de RSS-feed met de gevonden afbeelding
+# Stap 3: Initialiseer de RSS-feed
 fg = FeedGenerator()
 fg.id(DIRKJAN_URL)
 fg.title('Dirkjan Strips')
 fg.link(href=DIRKJAN_URL, rel='alternate')
-fg.description('De allernieuwste Dirkjan strip.')
+fg.description('De dagelijkse Dirkjan strips.')
 fg.language('nl')
 
-# Voeg de strip toe als een nieuw item in de feed
-fe = fg.add_entry()
-fe.id(image_url)  # Gebruik de unieke image URL als ID
-fe.title('Dirkjan Strip van vandaag') # Titel voor het item
-fe.link(href=image_url) # Link voor nu naar de afbeelding zelf
+# Stap 4: Loop door elke dag-link, bezoek de pagina en voeg de strip toe
+print("\nVerwerken van elke dag-pagina...")
+for link in day_links:
+    page_url = link.get('href')
+    day_name = link.text.strip()
+    
+    if not page_url:
+        print(f"WAARSCHUWING: Link gevonden zonder href. Overslaan.")
+        continue
 
-# Dit is de cruciale stap: plaats een HTML <img> tag in de beschrijving
-fe.description(f'<img src="{image_url}" alt="Dirkjan Strip" />')
+    print(f"--- Verwerken: {day_name} ({page_url}) ---")
 
+    try:
+        # Haal de HTML van de specifieke dag-pagina op
+        page_response = requests.get(page_url)
+        page_response.raise_for_status()
+        
+        # Parse de HTML van de dag-pagina
+        page_soup = BeautifulSoup(page_response.content, 'html.parser')
+        
+        # Zoek naar de comic-afbeelding op de dag-pagina
+        cartoon_article = page_soup.find('article', class_='cartoon')
+        if not cartoon_article:
+            print("  FOUT: Kon <article class='cartoon'> niet vinden op deze pagina. Overslaan.")
+            continue
+            
+        img_tag = cartoon_article.find('img')
+        if not img_tag:
+            print("  FOUT: Kon <img> tag niet vinden. Overslaan.")
+            continue
+            
+        image_url = img_tag.get('src')
+        if not image_url:
+            print("  FOUT: <img> tag heeft geen 'src'. Overslaan.")
+            continue
+            
+        print(f"  SUCCES: Afbeelding gevonden: {image_url}")
 
-# Stap 4: Schrijf het XML-bestand weg
+        # Voeg een item toe aan de feed voor deze dag
+        fe = fg.add_entry()
+        fe.id(page_url)  # De unieke URL van de pagina als ID
+        fe.title(f'Dirkjan - {day_name}')
+        fe.link(href=page_url)
+        fe.description(f'<img src="{image_url}" alt="Dirkjan Strip voor {day_name}" />')
+
+    except requests.exceptions.RequestException as e:
+        print(f"  FOUT: Kon pagina {page_url} niet ophalen. Fout: {e}")
+
+# Stap 5: Schrijf het finale XML-bestand weg
 try:
     fg.rss_file('dirkjan.xml', pretty=True)
-    print("SUCCES: 'dirkjan.xml' is aangemaakt met daarin de afbeelding.")
+    print("\nSUCCES: 'dirkjan.xml' is aangemaakt met alle gevonden strips.")
 except Exception as e:
-    print(f"FOUT: Kon het bestand niet wegschrijven. Foutmelding: {e}")
+    print(f"\nFOUT: Kon het finale bestand niet wegschrijven. Foutmelding: {e}")
     exit(1)
