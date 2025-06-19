@@ -21,14 +21,12 @@ except requests.exceptions.RequestException as e:
 soup = BeautifulSoup(response.content, 'html.parser')
 print("Zoeken naar de navigatiebalk met dagen...")
 
-# Zoek naar de <div class="post-navigation">
 navigation_div = soup.find('div', class_='post-navigation')
 
 if not navigation_div:
     print("FOUT: De <div class='post-navigation'> is niet gevonden.")
     exit(1)
 
-# Vind alle 'a' tags (links) binnen deze navigatie-div
 day_links = navigation_div.find_all('a')
 
 if not day_links:
@@ -45,47 +43,42 @@ fg.link(href=DIRKJAN_URL, rel='alternate')
 fg.description('De dagelijkse Dirkjan strips.')
 fg.language('nl')
 
-# Stap 4: Loop door elke dag-link, bezoek de pagina en voeg de strip toe
+# Stap 4: Loop door elke dag-link en verwerk de pagina
 print("\nVerwerken van elke dag-pagina...")
-for link in day_links:
+for link in reversed(day_links): # 'reversed' om de oudste strip eerst te tonen
     page_url = link.get('href')
     day_name = link.text.strip()
     
     if not page_url:
-        print(f"WAARSCHUWING: Link gevonden zonder href. Overslaan.")
         continue
 
     print(f"--- Verwerken: {day_name} ({page_url}) ---")
 
     try:
-        # Haal de HTML van de specifieke dag-pagina op
         page_response = requests.get(page_url)
         page_response.raise_for_status()
-        
-        # Parse de HTML van de dag-pagina
         page_soup = BeautifulSoup(page_response.content, 'html.parser')
         
-        # Zoek naar de comic-afbeelding op de dag-pagina
         cartoon_article = page_soup.find('article', class_='cartoon')
         if not cartoon_article:
-            print("  FOUT: Kon <article class='cartoon'> niet vinden op deze pagina. Overslaan.")
             continue
             
         img_tag = cartoon_article.find('img')
         if not img_tag:
-            print("  FOUT: Kon <img> tag niet vinden. Overslaan.")
             continue
             
         image_url = img_tag.get('src')
         if not image_url:
-            print("  FOUT: <img> tag heeft geen 'src'. Overslaan.")
             continue
             
         print(f"  SUCCES: Afbeelding gevonden: {image_url}")
 
-        # Voeg een item toe aan de feed voor deze dag
+        # Voeg een item toe aan de feed
         fe = fg.add_entry()
-        fe.id(page_url)  # De unieke URL van de pagina als ID
+        # --- CORRECTIE ---
+        # Gebruik de unieke URL van de afbeelding als ID
+        fe.id(image_url) 
+        # -----------------
         fe.title(f'Dirkjan - {day_name}')
         fe.link(href=page_url)
         fe.description(f'<img src="{image_url}" alt="Dirkjan Strip voor {day_name}" />')
@@ -96,7 +89,7 @@ for link in day_links:
 # Stap 5: Schrijf het finale XML-bestand weg
 try:
     fg.rss_file('dirkjan.xml', pretty=True)
-    print("\nSUCCES: 'dirkjan.xml' is aangemaakt met alle gevonden strips.")
+    print("\nSUCCES: 'dirkjan.xml' is aangemaakt met unieke IDs voor elke strip.")
 except Exception as e:
     print(f"\nFOUT: Kon het finale bestand niet wegschrijven. Foutmelding: {e}")
     exit(1)
