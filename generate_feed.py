@@ -1,41 +1,25 @@
 import requests
 from bs4 import BeautifulSoup
 from feedgen.feed import FeedGenerator
+from datetime import datetime, timezone, timedelta
 import re
 
-print("Script gestart: Ophalen van dagelijkse strips.")
+print("Script gestart: Genereren van feed met alleen handmatige correctie van lastBuildDate.")
 
-# URL van de hoofdpagina
 DIRKJAN_URL = 'https://dirkjan.nl/'
 
-# Stap 1: Haal de hoofdpagina op
 try:
     response = requests.get(DIRKJAN_URL)
     response.raise_for_status()
-    print("SUCCES: Hoofdpagina HTML opgehaald.")
-except requests.exceptions.RequestException as e:
-    print(f"FOUT: Kon hoofdpagina niet ophalen. Fout: {e}")
+    soup = BeautifulSoup(response.content, 'html.parser')
+    navigation_div = soup.find('div', class_='post-navigation')
+    day_links = navigation_div.find_all('a')
+except Exception as e:
+    print(f"FOUT: Kon de hoofdpagina niet parsen. Fout: {e}")
     exit(1)
 
-# Stap 2: Parse de HTML en vind de navigatielinks voor de dagen
-soup = BeautifulSoup(response.content, 'html.parser')
-print("Zoeken naar de navigatiebalk met dagen...")
+print(f"INFO: {len(day_links)} dag-links gevonden.")
 
-navigation_div = soup.find('div', class_='post-navigation')
-
-if not navigation_div:
-    print("FOUT: De <div class='post-navigation'> is niet gevonden.")
-    exit(1)
-
-day_links = navigation_div.find_all('a')
-
-if not day_links:
-    print("FOUT: Geen dag-links gevonden in de navigatiebalk.")
-    exit(1)
-
-print(f"SUCCES: {len(day_links)} dag-links gevonden.")
-
-# Stap 3: Initialiseer de RSS-feed
 fg = FeedGenerator()
 fg.id(DIRKJAN_URL)
 fg.title('Dirkjan Strips')
@@ -43,54 +27,53 @@ fg.link(href=DIRKJAN_URL, rel='alternate')
 fg.description('De dagelijkse Dirkjan strips.')
 fg.language('nl')
 
-# Stap 4: Loop door elke dag-link, bezoek de pagina en voeg de strip toe
-print("\nVerwerken van elke dag-pagina...")
-for link in day_links:
-    page_url = link.get('href')
-    day_name = link.text.strip()
-    
-    if not page_url:
-        print(f"WAARSCHUWING: Link gevonden zonder href. Overslaan.")
-        continue
-
-    print(f"--- Verwerken: {day_name} ({page_url}) ---")
-
+for link in reversed(day_links):
     try:
+        page_url = link.get('href')
+        day_name = link.text.strip()
+        if not page_url: continue
+
         page_response = requests.get(page_url)
-        page_response.raise_for_status()
-        
         page_soup = BeautifulSoup(page_response.content, 'html.parser')
         
         cartoon_article = page_soup.find('article', class_='cartoon')
-        if not cartoon_article:
-            print("  FOUT: Kon <article class='cartoon'> niet vinden op deze pagina. Overslaan.")
-            continue
-            
         img_tag = cartoon_article.find('img')
-        if not img_tag:
-            print("  FOUT: Kon <img> tag niet vinden. Overslaan.")
-            continue
-            
         image_url = img_tag.get('src')
-        if not image_url:
-            print("  FOUT: <img> tag heeft geen 'src'. Overslaan.")
-            continue
-            
-        print(f"  SUCCES: Afbeelding gevonden: {image_url}")
+        if not image_url: continue
 
+        # Voeg item toe aan de feed ZONDER pubDate
         fe = fg.add_entry()
-        fe.id(page_url)
+        fe.id(image_url)
         fe.title(f'Dirkjan - {day_name}')
         fe.link(href=page_url)
         fe.description(f'<img src="{image_url}" alt="Dirkjan Strip voor {day_name}" />')
+    except Exception as e:
+        print(f"INFO: Kon item voor {page_url} niet verwerken. Fout: {e}")
 
-    except requests.exceptions.RequestException as e:
-        print(f"  FOUT: Kon pagina {page_url} niet ophalen. Fout: {e}")
 
-# Stap 5: Schrijf het finale XML-bestand weg
+# Handmatige correctie van lastBuildDate
 try:
-    fg.rss_file('dirkjan.xml', pretty=True)
-    print("\nSUCCES: 'dirkjan.xml' is aangemaakt met alle gevonden strips.")
+    # Genereer de feed als een string
+    xml_string_met_foute_datum = fg.rss_str(pretty=True).decode('utf-8')
+
+    # Creëer de correcte datumstring in CEST (+02:00)
+    cest_tz = timezone(timedelta(hours=2))
+    now_cest = datetime.now(timezone.utc).astimezone(cest_tz)
+    correct_date_string = now_cest.strftime("%a, %d %b %Y %H:%M:%S %z")
+
+    # Vervang de volledige <lastBuildDate> tag in de string
+    gecorrigeerde_xml_string = re.sub(
+        r'<lastBuildDate>.*?</lastBuildDate>',
+        f'<lastBuildDate>{correct_date_string}</lastBuildDate>',
+        xml_string_met_foute_datum
+    )
+
+    # Schrijf de gecorrigeerde string naar het .xml bestand
+    with open('dirkjan.xml', 'w', encoding='utf-8') as f:
+        f.write(gecorrigeerde_xml_string)
+    
+    print("\nSUCCES: 'dirkjan.xml' is aangemaakt met handmatig gecorrigeerde lastBuildDate.")
+
 except Exception as e:
     print(f"\nFOUT: Kon het finale bestand niet wegschrijven. Foutmelding: {e}")
     exit(1)
