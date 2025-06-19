@@ -27,7 +27,7 @@ jobs:
           pip install requests beautifulsoup4 feedgen
 
       - name: Run Python script to generate feed
-        run: python generate_final.py # Let op: de bestandsnaam is aangepast!
+        run: python generate_feed.py # Let op: de bestandsnaam is aangepast!
 
       - name: Verify file was created
         run: ls -l
