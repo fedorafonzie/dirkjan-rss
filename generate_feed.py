@@ -21,12 +21,14 @@ except requests.exceptions.RequestException as e:
 soup = BeautifulSoup(response.content, 'html.parser')
 print("Zoeken naar de navigatiebalk met dagen...")
 
+# Zoek naar de <div class="post-navigation">
 navigation_div = soup.find('div', class_='post-navigation')
 
 if not navigation_div:
     print("FOUT: De <div class='post-navigation'> is niet gevonden.")
     exit(1)
 
+# Vind alle 'a' tags (links) binnen deze navigatie-div
 day_links = navigation_div.find_all('a')
 
 if not day_links:
@@ -56,11 +58,14 @@ for link in day_links:
     print(f"--- Verwerken: {day_name} ({page_url}) ---")
 
     try:
+        # Haal de HTML van de specifieke dag-pagina op
         page_response = requests.get(page_url)
         page_response.raise_for_status()
         
+        # Parse de HTML van de dag-pagina
         page_soup = BeautifulSoup(page_response.content, 'html.parser')
         
+        # Zoek naar de comic-afbeelding op de dag-pagina
         cartoon_article = page_soup.find('article', class_='cartoon')
         if not cartoon_article:
             print("  FOUT: Kon <article class='cartoon'> niet vinden op deze pagina. Overslaan.")
@@ -78,8 +83,9 @@ for link in day_links:
             
         print(f"  SUCCES: Afbeelding gevonden: {image_url}")
 
+        # Voeg een item toe aan de feed voor deze dag
         fe = fg.add_entry()
-        fe.id(page_url)
+        fe.id(page_url)  # De unieke URL van de pagina als ID
         fe.title(f'Dirkjan - {day_name}')
         fe.link(href=page_url)
         fe.description(f'<img src="{image_url}" alt="Dirkjan Strip voor {day_name}" />')
@@ -89,4 +95,8 @@ for link in day_links:
 
 # Stap 5: Schrijf het finale XML-bestand weg
 try:
-    fg.rss_file('dirkjan.xml', pretty=True
+    fg.rss_file('dirkjan.xml', pretty=True)
+    print("\nSUCCES: 'dirkjan.xml' is aangemaakt met alle gevonden strips.")
+except Exception as e:
+    print(f"\nFOUT: Kon het finale bestand niet wegschrijven. Foutmelding: {e}")
+    exit(1)
