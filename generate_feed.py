@@ -2,59 +2,68 @@ import requests
 from bs4 import BeautifulSoup
 from feedgen.feed import FeedGenerator
 
-# URL van de hoofdpagina met de nieuwste strip
+print("Script gestart: Ophalen van webpagina.")
+
+# URL van de te parsen pagina
 DIRKJAN_URL = 'https://dirkjan.nl/'
 
-# 1. Haal de HTML op
+# Stap 1: Haal de webpagina op
 try:
     response = requests.get(DIRKJAN_URL)
-    response.raise_for_status() # Stopt het script als de pagina niet bereikbaar is
+    response.raise_for_status()
+    print("SUCCES: Website HTML opgehaald.")
 except requests.exceptions.RequestException as e:
-    print(f"Fout bij het ophalen van de pagina: {e}")
-    exit()
+    print(f"FOUT: Kon website niet ophalen. Fout: {e}")
+    exit(1)
 
-# 2. Parse de HTML met BeautifulSoup
+# Stap 2: Parse de HTML en vind de afbeelding
 soup = BeautifulSoup(response.content, 'html.parser')
+print("Zoeken naar de comic-afbeelding...")
 
-# Zoek de container van de nieuwste strip
-# Dit is het meest kwetsbare deel; de class 'cartoon-image-wrapper' moet correct zijn.
-# Deze moet u zelf verifiëren door de HTML van de site te inspecteren.
-latest_cartoon_wrapper = soup.find('div', class_='cartoon-image-wrapper')
+# Zoek naar de <article> tag met class="cartoon"
+cartoon_article = soup.find('article', class_='cartoon')
 
-if not latest_cartoon_wrapper:
-    print("Kan de container van de strip niet vinden. Is de website-structuur veranderd?")
-    exit()
+if not cartoon_article:
+    print("FOUT: De <article class='cartoon'> tag is niet gevonden.")
+    exit(1)
 
-# Haal de informatie uit de container
-link_tag = latest_cartoon_wrapper.find('a')
-img_tag = latest_cartoon_wrapper.find('img')
+# Zoek binnen die article-tag naar de <img> tag
+img_tag = cartoon_article.find('img')
 
-if not link_tag or not img_tag:
-    print("Kan de link of afbeelding in de container niet vinden.")
-    exit()
+if not img_tag:
+    print("FOUT: De <img> tag is niet gevonden binnen de article-tag.")
+    exit(1)
 
-cartoon_url = link_tag['href']
-cartoon_title = img_tag.get('alt', 'Dirkjan Strip') # Gebruik 'alt' tekst als titel
-cartoon_img_src = img_tag['src']
-cartoon_description = f'<img src="{cartoon_img_src}" alt="{cartoon_title}" />'
+# Haal de URL uit het 'src' attribuut van de image-tag
+image_url = img_tag.get('src')
+if not image_url:
+    print("FOUT: De <img> tag heeft geen 'src' attribuut.")
+    exit(1)
 
-# 3. Genereer de RSS-feed
+print(f"SUCCES: Afbeelding URL gevonden: {image_url}")
+
+# Stap 3: Bouw de RSS-feed met de gevonden afbeelding
 fg = FeedGenerator()
 fg.id(DIRKJAN_URL)
-fg.title('Dirkjan Strips (Custom Feed)')
-fg.author({'name': 'Dirkjan Fan'})
+fg.title('Dirkjan Strips')
 fg.link(href=DIRKJAN_URL, rel='alternate')
-fg.subtitle('De allernieuwste Dirkjan strip, automatisch ververst.')
+fg.description('De allernieuwste Dirkjan strip.')
 fg.language('nl')
 
-# Voeg de gevonden strip toe als een item in de feed
+# Voeg de strip toe als een nieuw item in de feed
 fe = fg.add_entry()
-fe.id(cartoon_url)
-fe.title(cartoon_title)
-fe.link(href=cartoon_url)
-fe.description(cartoon_description, isSummary=False)
+fe.id(image_url)  # Gebruik de unieke image URL als ID
+fe.title('Dirkjan Strip van vandaag') # Titel voor het item
+fe.link(href=image_url) # Link voor nu naar de afbeelding zelf
 
-# 4. Sla de feed op als een XML-bestand
-fg.rss_file('dirkjan.xml', pretty=True) # pretty=True maakt het bestand leesbaar
+# Dit is de cruciale stap: plaats een HTML <img> tag in de beschrijving
+fe.description(f'<img src="{image_url}" alt="Dirkjan Strip" />')
 
-print("RSS-feed 'dirkjan.xml' succesvol aangemaakt.")
+
+# Stap 4: Schrijf het XML-bestand weg
+try:
+    fg.rss_file('dirkjan.xml', pretty=True)
+    print("SUCCES: 'dirkjan.xml' is aangemaakt met daarin de afbeelding.")
+except Exception as e:
+    print(f"FOUT: Kon het bestand niet wegschrijven. Foutmelding: {e}")
+    exit(1)
