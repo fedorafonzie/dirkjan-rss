@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" version="2.0">
+  <channel>
+    <title>Dirkjan Strips</title>
+    <link>https://dirkjan.nl/</link>
+    <description>De dagelijkse Dirkjan strips.</description>
+    <docs>http://www.rssboard.org/rss-specification</docs>
+    <generator>python-feedgen</generator>
+    <language>nl</language>
+    <lastBuildDate>Fri, 20 Jun 2025 11:03:38 +0200</lastBuildDate>
+    <item>
+      <title>Dirkjan - Mon</title>
+      <link>https://dirkjan.nl/cartoon/20250616_2257542119/</link>
+      <description>&lt;img src="https://dirkjan.nl/wp-content/uploads/2025/06/862736e99a41bc8f0b47fd515df5eaf1.png" alt="Dirkjan Strip voor Mon" /&gt;</description>
+      <guid isPermaLink="false">https://dirkjan.nl/wp-content/uploads/2025/06/862736e99a41bc8f0b47fd515df5eaf1.png</guid>
+    </item>
+    <item>
+      <title>Dirkjan - Tue</title>
+      <link>https://dirkjan.nl/cartoon/20250617_686279286/</link>
+      <description>&lt;img src="https://dirkjan.nl/wp-content/uploads/2025/06/0bd646b4449ad866cc635e0b71673ab9.png" alt="Dirkjan Strip voor Tue" /&gt;</description>
+      <guid isPermaLink="false">https://dirkjan.nl/wp-content/uploads/2025/06/0bd646b4449ad866cc635e0b71673ab9.png</guid>
+    </item>
+    <item>
+      <title>Dirkjan - Wed</title>
+      <link>https://dirkjan.nl/cartoon/20250618_2785914188/</link>
+      <description>&lt;img src="https://dirkjan.nl/wp-content/uploads/2025/06/8d339cea540843ecf0f8c68fa23a3e50.png" alt="Dirkjan Strip voor Wed" /&gt;</description>
+      <guid isPermaLink="false">https://dirkjan.nl/wp-content/uploads/2025/06/8d339cea540843ecf0f8c68fa23a3e50.png</guid>
+    </item>
+    <item>
+      <title>Dirkjan - Thu</title>
+      <link>https://dirkjan.nl/cartoon/20250619_140852445/</link>
+      <description>&lt;img src="https://dirkjan.nl/wp-content/uploads/2025/06/9995a0853f369ebbe91c1a21ebe620c8.png" alt="Dirkjan Strip voor Thu" /&gt;</description>
+      <guid isPermaLink="false">https://dirkjan.nl/wp-content/uploads/2025/06/9995a0853f369ebbe91c1a21ebe620c8.png</guid>
+    </item>
+    <item>
+      <title>Dirkjan - Fri</title>
+      <link>https://dirkjan.nl/cartoon/20250620_2256824711/</link>
+      <description>&lt;img src="https://dirkjan.nl/wp-content/uploads/2025/06/12a2505622edb31b130fc94a7de88492.png" alt="Dirkjan Strip voor Fri" /&gt;</description>
+      <guid isPermaLink="false">https://dirkjan.nl/wp-content/uploads/2025/06/12a2505622edb31b130fc94a7de88492.png</guid>
+    </item>
+  </channel>
+</rss>
